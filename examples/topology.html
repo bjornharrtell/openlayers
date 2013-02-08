@@ -1,0 +1,322 @@
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <title>Topology</title>
+    <link rel="stylesheet" href="../theme/default/style.css" type="text/css" />
+    <link rel="stylesheet" href="style.css" type="text/css" />
+    <style type="text/css">
+        .olControlEditingToolbar .olControlModifyFeatureItemInactive { 
+            background-position: -1px 0px ;                                                                   
+        }
+        .olControlEditingToolbar .olControlModifyFeatureItemActive { 
+            background-position: -1px -23px ;                                                                   
+        }
+        table {
+            padding: 1em 0 1em;
+        }
+        td {
+            padding: 0.5em 1em;
+            border: 1px solid #ddd;
+        }
+        tr.head td {
+            text-align: center;
+            font-weight: bold;
+        }
+    </style>
+    <script src="../lib/Firebug/firebug.js"></script>
+    <script src="../lib/OpenLayers.js"></script>
+    <script type="text/javascript">
+        OpenLayers.Feature.Vector.style['default']['strokeWidth'] = '2';
+
+        function init() {
+            initMap();
+            initUI();
+        }
+        
+        var map, draw, modify, snap, topology;
+        function initMap() {
+
+            map = new OpenLayers.Map('map');
+            var styles = new OpenLayers.StyleMap({
+                "default": new OpenLayers.Style(null, {
+                    rules: [
+                        new OpenLayers.Rule({
+                            symbolizer: {
+                                "Point": {
+                                    pointRadius: 5,
+                                    graphicName: "square",
+                                    fillColor: "white",
+                                    fillOpacity: 0.25,
+                                    strokeWidth: 1,
+                                    strokeOpacity: 1,
+                                    strokeColor: "#3333aa"
+                                },
+                                "Line": {
+                                    strokeWidth: 3,
+                                    strokeOpacity: 1,
+                                    strokeColor: "#6666aa"
+                                },
+                                "Polygon": {
+                                    strokeWidth: 1,
+                                    strokeOpacity: 1,
+                                    fillColor: "#9999aa",
+                                    strokeColor: "#6666aa"
+                                }
+                            }
+                        })
+                    ]
+                }),
+                "select": new OpenLayers.Style(null, {
+                    rules: [
+                        new OpenLayers.Rule({
+                            symbolizer: {
+                                "Point": {
+                                    pointRadius: 5,
+                                    graphicName: "square",
+                                    fillColor: "white",
+                                    fillOpacity: 0.25,
+                                    strokeWidth: 2,
+                                    strokeOpacity: 1,
+                                    strokeColor: "#0000ff"
+                                },
+                                "Line": {
+                                    strokeWidth: 3,
+                                    strokeOpacity: 1,
+                                    strokeColor: "#0000ff"
+                                },
+                                "Polygon": {
+                                    strokeWidth: 2,
+                                    strokeOpacity: 1,
+                                    fillColor: "#0000ff",
+                                    strokeColor: "#0000ff"
+                                }
+                            }
+                        })
+                    ]
+                }),
+                'error': {
+                    fillColor: "red",
+                    fillOpacity: 0.5, 
+                    hoverFillColor: "white",
+                    hoverFillOpacity: 0.8,
+                    strokeColor: "red",
+                    strokeOpacity: 1,
+                    strokeWidth: 2,
+                    strokeLinecap: "round",
+                    strokeDashstyle: "solid",
+                    hoverStrokeColor: "red",
+                    hoverStrokeOpacity: 1,
+                    hoverStrokeWidth: 0.2,
+                    pointRadius: 6,
+                    hoverPointRadius: 1,
+                    hoverPointUnit: "%",
+                    pointerEvents: "visiblePainted",
+                    cursor: "inherit"
+                },
+                "temporary": new OpenLayers.Style(null, {
+                    rules: [
+                        new OpenLayers.Rule({
+                            symbolizer: {
+                                "Point": {
+                                    graphicName: "square",
+                                    pointRadius: 5,
+                                    fillColor: "white",
+                                    fillOpacity: 0.25,
+                                    strokeWidth: 2,
+                                    strokeColor: "#0000ff"
+                                },
+                                "Line": {
+                                    strokeWidth: 3,
+                                    strokeOpacity: 1,
+                                    strokeColor: "#0000ff"
+                                },
+                                "Polygon": {
+                                    strokeWidth: 2,
+                                    strokeOpacity: 1,
+                                    strokeColor: "#0000ff",
+                                    fillColor: "#0000ff"
+                                }
+                            }
+                        })
+                    ]
+                })
+            });
+    
+            // create three vector layers
+            var layer = new OpenLayers.Layer.Vector("polygons", {
+                styleMap: styles,
+                isBaseLayer: true
+            });
+            map.addLayers([layer]);
+
+            var geojson = '{"type":"FeatureCollection","features":[{"type":"Feature","id":"OpenLayers.Feature.Vector_1489","properties":{},"geometry":{"type":"Polygon","coordinates":[[[-109.6875,63.6328125],[-107.578125,-17.9296875],[-80.5078125,-3.8671875],[-51.328125,16.875],[-56.953125,67.1484375],[-109.6875,63.6328125]]]}},{"type":"Feature","id":"OpenLayers.Feature.Vector_1668","properties":{},"geometry":{"type":"Polygon","coordinates":[[[-56.953125,67.1484375],[-51.328125,16.875],[-11.25,16.875],[21.09375,21.4453125],[22.5,58.0078125],[-56.953125,67.1484375]]]}},{"type":"Feature","id":"OpenLayers.Feature.Vector_108","properties":{},"geometry":{"type":"Polygon","coordinates":[[[14.0625,-30.9375],[-29.53125,-45],[-51.328125,-36.9140625],[-80.5078125,-3.8671875],[-51.328125,16.875],[-11.25,16.875],[21.09375,21.4453125],[14.0625,-30.9375]]]}},{"type":"Feature","id":"OpenLayers.Feature.Vector_1302","properties":{},"geometry":{"type":"Polygon","coordinates":[[[-102.65625,-37.265625],[-83.671875,-61.875],[-29.53125,-45],[-51.328125,-36.9140625],[-80.5078125,-3.8671875],[-107.578125,-17.9296875],[-102.65625,-37.265625]]]}}]}';
+
+            var format = new OpenLayers.Format.GeoJSON();
+            var features = format.read(geojson);
+            layer.addFeatures(features);
+
+            topology = new OpenLayers.Control.Topology({
+                layer: layer,
+                rules: [OpenLayers.Topology.Rule.VerticesMustIntersect]
+            });
+            topology.activate(); 
+            
+            // configure the snapping agent
+            snap = new OpenLayers.Control.Snapping({
+                layer: layer,
+                targets: [layer],
+                greedy: false
+            });
+            snap.activate();
+
+            // add some editing tools to a panel
+            var panel = new OpenLayers.Control.Panel({
+                displayClass: "olControlEditingToolbar"
+            });
+            draw = new OpenLayers.Control.DrawFeature(
+                layer, OpenLayers.Handler.Polygon,
+                {displayClass: "olControlDrawFeaturePoint", title: "Draw Features"}
+            );
+            modify = new OpenLayers.Control.ModifyFeature(
+                layer, {displayClass: "olControlModifyFeature", title: "Modify Features", enforceTopology: true}
+            );            
+            panel.addControls([
+                new OpenLayers.Control.Navigation({title: "Navigate"}),
+                draw, modify
+            ]);
+            map.addControl(panel);
+            
+            // give the map a location
+            map.setCenter(new OpenLayers.LonLat(0, 0), 1);
+        }
+        
+        /**
+         * Add behavior to page elements.  This basically lets us set snapping
+         * target properties with the checkboxes and text inputs.  The checkboxes
+         * toggle the target node, vertex, or edge (boolean) values.  The
+         * text inputs set the nodeTolerance, vertexTolerance, or edgeTolerance
+         * property values.
+         */
+        function initUI() {
+            var check = document.getElementById("snapping");
+            check.checked = true;
+            check.onclick = function() {
+                if(check.checked) {
+                    snap.activate();
+                } else {
+                    snap.deactivate();
+                }
+            };
+
+            var check2 = document.getElementById("topology");
+            check2.checked = true;
+            check2.onclick = function() {
+                if(check2.checked) {
+                    topology.setEnforce(true);
+                } else {
+                    topology.setEnforce(false);
+                }
+            };
+            
+            var sel = document.getElementById("editable");
+            sel.value = "poly";
+            sel.onchange = function() {
+                updateEditable(sel.value);
+            }
+            
+            var target, type, tog, tol;
+            var types = ["node", "vertex", "edge"];
+            for(var i=0; i<snap.targets.length; ++i) {
+                target = snap.targets[i];
+                for(var j=0; j<types.length; ++j) {
+                    type = types[j];
+                    tog = document.getElementById(i + "_" + type);
+                    tog.checked = target[type];
+                    tog.onclick = (function(tog, type, target) {
+                        return function() {target[type] = tog.checked;}
+                    })(tog, type, target);
+                    tol = document.getElementById(i + "_" + type + "Tolerance");
+                    tol.value = target[type + "Tolerance"];
+                    tol.onchange = (function(tol, type, target) {
+                        return function() {
+                            target[type + "Tolerance"] = Number(tol.value) || 0;
+                        }
+                    })(tol, type, target);
+                }
+            }
+            
+        }
+        
+        // this function allows the editable layer to be changed
+        // for the snapping control, this amounts to calling setLayer
+        function updateEditable(name) {
+
+            layer = window[name];
+            
+            // update the editable layer for the snapping control (nice)
+            snap.setLayer(layer);
+
+            // update the editable layer for the modify control (ugly)
+            var modActive = modify.active;
+            if(modActive) {
+                modify.deactivate();
+            }
+            modify.layer = layer;
+            modify.selectControl.layer = layer;
+            modify.selectControl.handlers.feature.layer = layer;
+            modify.dragControl.layer = layer;
+            modify.dragControl.handlers.drag.layer = layer;
+            modify.dragControl.handlers.feature.layer = layer;
+            if(modActive) {
+                modify.activate();
+            }
+            
+            // update the editable layer for the draw control (very ugly)
+            var drawActive = draw.active;
+            if(drawActive) {
+                draw.deactivate();
+            }
+            draw.layer = layer;
+            var handler = ({
+                layer: OpenLayers.Handler.Polygon
+            })[name];
+            draw.handler = new handler(draw, draw.callbacks, draw.handlerOptions);
+            if(drawActive) {
+                draw.activate();
+            }
+
+        }
+
+    </script>
+  </head>
+  <body onload="init()">
+    <h1 id="title">Topology Example</h1>
+    <div id="shortdesc">
+    A demonstration of topology enforcement while editing vector features.<br>
+    The topology rule used says that vertices must intersect.<br>
+    The features will be colored in red if they does not satisfy the rule.<br>
+    Note that currently using both snapping and topology enforcement can cause strange side effects.<br><br></div>
+    <div id="map" class="smallmap"></div>
+    <br/>
+    <label for="editable">Editable Layer:</label>
+    <select id="editable" name="editable">
+        <option value="poly">polygons</option>
+    </select>
+    <label for="snapping">Enable Snapping</label>
+    <input type="checkbox" name="snapping" id="snapping" checked="checked" />
+    <label for="topology">Enforce Topology</label>
+    <input type="checkbox" name="topology" id="topology" checked="checked" />
+    <table>
+        <tbody>
+            <tr class="head">
+                <td>targets</td><td>node</td><td>vertex</td><td>edge</td>
+            </tr>
+            <tr>
+                <td>polygons</td>
+                <td><input type="checkbox" id="0_node" /><input id="0_nodeTolerance" type="text" size="3" /></td>
+                <td><input type="checkbox" id="0_vertex" /><input id="0_vertexTolerance" type="text" size="3" /></td>
+                <td><input type="checkbox" id="0_edge" /><input id="0_edgeTolerance" type="text" size="3" /></td>
+            </tr>
+        </tbody>
+    </table>
+  </body>
+</html>
