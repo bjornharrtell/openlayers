@@ -140,7 +140,6 @@
 
 /**
  * Label style properties applied to all features. At a minimum, a `text-value` must be provided.
- * Note: text style is currently not supported in WebGL layers
  *
  * @typedef {Object} FlatText
  * @property {StringExpression} [text-value] Text content (with `\n` for line breaks).
